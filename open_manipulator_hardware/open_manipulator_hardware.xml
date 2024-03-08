@@ -1,0 +1,9 @@
+<library path="open_manipulator_hardware">
+  <class name="open_manipulator_hardware/OpenManipulatorManipulationSystemHardware"
+         type="robotis::open_manipulator_hardware::OpenManipulatorManipulationSystemHardware"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Add description
+    </description>
+  </class>
+</library>

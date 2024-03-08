@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>open_manipulator_teleop</name>
+  <version>2.1.1</version>
+  <description>Ros2 Package of the open_manipulator_teleop</description>
+  <maintainer email="willson@robotis.com">Will Son</maintainer>
+  <license>Apache 2.0</license>
+  <url type="repository">https://github.com/timassman/open_manipulator_moveit2</url>
+  <url type="bugtracker">https://github.com/timassman/open_manipulator_moveit2/issues</url>
+  <author email="hjkim@robotis.com">Hye-jong KIM</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>open_manipulator_bringup</depend>
+  <depend>open_manipulator_moveit_config</depend>
+  <depend>open_manipulator_description</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>sensor_msgs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

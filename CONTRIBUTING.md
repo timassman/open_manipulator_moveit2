@@ -19,6 +19,6 @@ the code they are contributing to the project according to the
 
 
 [ROS wiki](http://wiki.ros.org/open_manipulator_with_tb3)
-[ROBOTIS emanual](http://emanual.robotis.com/docs/en/platform/turtlebot3/manipulation)
-[Github Repos](https://github.com/ROBOTIS-GIT/turtlebot3_manipulation)
-[Github Issues](https://github.com/ROBOTIS-GIT/turtlebot3_manipulation/issues)
+[ROBOTIS emanual](http://emanual.robotis.com/docs/en/platform/open_manipulator/manipulation)
+[Github Repos](https://github.com/ROBOTIS-GIT/open_manipulator)
+[Github Issues](https://github.com/ROBOTIS-GIT/open_manipulator/issues)
