@@ -58,26 +58,7 @@ typedef struct
   ControlItem ir = {34, 4};
   ControlItem sonar = {38, 4};
 
-  ControlItem battery_voltage = {42, 4};
-  ControlItem battery_percentage = {46, 4};
-
   ControlItem sound = {50, 1};
-
-  ControlItem imu_re_calibration = {59, 1};
-
-  ControlItem imu_angular_velocity_x = {60, 4};
-  ControlItem imu_angular_velocity_y = {64, 4};
-  ControlItem imu_angular_velocity_z = {68, 4};
-  ControlItem imu_linear_acceleration_x = {72, 4};
-  ControlItem imu_linear_acceleration_y = {76, 4};
-  ControlItem imu_linear_acceleration_z = {80, 4};
-  ControlItem imu_magnetic_x = {84, 4};
-  ControlItem imu_magnetic_y = {88, 4};
-  ControlItem imu_magnetic_z = {92, 4};
-  ControlItem imu_orientation_w = {96, 4};
-  ControlItem imu_orientation_x = {100, 4};
-  ControlItem imu_orientation_y = {104, 4};
-  ControlItem imu_orientation_z = {108, 4};
 
   ControlItem present_current_left = {120, 4};
   ControlItem present_current_right = {124, 4};
@@ -87,9 +68,6 @@ typedef struct
 
   ControlItem present_position_left = {136, 4};
   ControlItem present_position_right = {140, 4};
-
-  ControlItem connect_wheels = {148, 1};
-  ControlItem torque_wheels = {149, 1};
 
   ControlItem cmd_velocity_linear_x = {150, 4};
   ControlItem cmd_velocity_linear_y = {154, 4};

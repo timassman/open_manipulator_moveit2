@@ -74,15 +74,32 @@ def generate_launch_description():
         )
     )
 
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'usb_port',
+            default_value='"/dev/ttyUSB0"',
+            description='Connected USB port'
+        )
+    )
+    
+    declared_arguments.append(
+        DeclareLaunchArgument(
+           'baud_rate',
+           default_value='"1000000"',
+           description='Set Baudrate',
+        )
+    )
+
     start_rviz = LaunchConfiguration('start_rviz')
     prefix = LaunchConfiguration('prefix')
     use_sim = LaunchConfiguration('use_sim')
     use_fake_hardware = LaunchConfiguration('use_fake_hardware')
     fake_sensor_commands = LaunchConfiguration('fake_sensor_commands')
+    usb_port = LaunchConfiguration('usb_port')
+    baud_rate = LaunchConfiguration('baud_rate')
 
     urdf_file = Command(
-        [        delay_diff_drive_controller_spawner_after_joint_state_broadcaster_spawner,
-        delay_imu_broadcaster_spawner_after_joint_state_broadcaster_spawner,
+        [
             PathJoinSubstitution([FindExecutable(name='xacro')]),
             ' ',
             PathJoinSubstitution(
@@ -104,6 +121,12 @@ def generate_launch_description():
             ' ',
             'fake_sensor_commands:=',
             fake_sensor_commands,
+            ' ',
+            'usb_port:=',
+            usb_port,
+            ' ',
+            'baud_rate:=',
+            baud_rate,
         ]
     )
 

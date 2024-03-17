@@ -33,6 +33,10 @@ def generate_launch_description():
     start_rviz = LaunchConfiguration('start_rviz')
     prefix = LaunchConfiguration('prefix')
     use_fake_hardware = LaunchConfiguration('use_fake_hardware')
+    
+    # Usb port 'ttyUSB0' for U2D2, ttyACM0 for OpenCR
+    usb_port = LaunchConfiguration('usb_port', default='/dev/ttyUSB0')
+    baud_rate = LaunchConfiguration('baud_rate', default='1000000')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -50,12 +54,24 @@ def generate_launch_description():
             default_value='false',
             description='Start robot with fake hardware mirroring command to its states.'),
 
+        DeclareLaunchArgument(
+            'usb_port',
+            default_value=usb_port,
+            description='Connected USB port'),
+
+        DeclareLaunchArgument(
+           'baud_rate',
+           default_value=baud_rate,
+           description='Set Baudrate'),
+
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([ThisLaunchFileDir(), '/base.launch.py']),
             launch_arguments={
                 'start_rviz': start_rviz,
                 'prefix': prefix,
                 'use_fake_hardware': use_fake_hardware,
+                'usb_port': usb_port,
+                'baud_rate': baud_rate,
             }.items(),
         ),
     ])

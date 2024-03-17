@@ -58,39 +58,30 @@ hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on
   gripper_acceleration_ = stoi(info_.hardware_parameters["dxl_gripper_profile_acceleration"]);
   gripper_velocity_ = stoi(info_.hardware_parameters["dxl_gripper_profile_velocity"]);
 
-  opencr_ = std::make_unique<OpenCR>(id_);
-  if (opencr_->open_port(usb_port_)) {
-    RCLCPP_INFO(logger, "Succeeded to open port");
+  usbdevice_ = std::make_unique<OpenCR>(id_);
+  if (usbdevice_->open_port(usb_port_)) {
+    RCLCPP_INFO(logger, "Succeeded to open port %s", usb_port_.c_str());
   } else {
-    RCLCPP_FATAL(logger, "Failed to open port");
+    RCLCPP_FATAL(logger, "Failed to open port %s", usb_port_.c_str());
     return hardware_interface::CallbackReturn::ERROR;
   }
 
-  if (opencr_->set_baud_rate(baud_rate_)) {
+  if (usbdevice_->set_baud_rate(baud_rate_)) {
     RCLCPP_INFO(logger, "Succeeded to set baudrate");
   } else {
     RCLCPP_FATAL(logger, "Failed to set baudrate");
     return hardware_interface::CallbackReturn::ERROR;
   }
 
-  int32_t model_number = opencr_->ping();
+  int32_t model_number = usbdevice_->ping();
   RCLCPP_INFO(logger, "OpenCR Model Number %d", model_number);
 
-  if (opencr_->is_connect_manipulator()) {
+  if (usbdevice_->is_connect_manipulator()) {
     RCLCPP_INFO(logger, "Connected manipulator");
   } else {
     RCLCPP_FATAL(logger, "Not connected manipulator");
     return hardware_interface::CallbackReturn::ERROR;
   }
-
-  if (opencr_->is_connect_wheels()) {
-    RCLCPP_INFO(logger, "Connected wheels");
-  } else {
-    RCLCPP_FATAL(logger, "Not connected wheels");
-    return hardware_interface::CallbackReturn::ERROR;
-  }
-
-  dxl_wheel_commands_.resize(2, 0.0);
 
   dxl_joint_commands_.resize(4, 0.0);
   dxl_joint_commands_[0] = 0.0;
@@ -145,13 +136,6 @@ OpenManipulatorManipulationSystemHardware::export_command_interfaces()
 
   command_interfaces.emplace_back(
     hardware_interface::CommandInterface(
-      info_.joints[0].name, hardware_interface::HW_IF_VELOCITY, &dxl_wheel_commands_[0]));
-  command_interfaces.emplace_back(
-    hardware_interface::CommandInterface(
-      info_.joints[1].name, hardware_interface::HW_IF_VELOCITY, &dxl_wheel_commands_[1]));
-
-  command_interfaces.emplace_back(
-    hardware_interface::CommandInterface(
       info_.joints[2].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[0]));
   command_interfaces.emplace_back(
     hardware_interface::CommandInterface(
@@ -177,30 +161,25 @@ hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
   RCLCPP_INFO(logger, "Ready for start");
-  opencr_->send_heartbeat(heartbeat_++);
+  usbdevice_->send_heartbeat(heartbeat_++);
 
-  RCLCPP_INFO(logger, "Wait for IMU re-calibration");
-  opencr_->imu_recalibration();
-  rclcpp::sleep_for(std::chrono::seconds(3));
+  RCLCPP_INFO(logger, "Joints torque ON");
+  usbdevice_->joints_torque(opencr::ON);
 
-  RCLCPP_INFO(logger, "Joints and wheels torque ON");
-  opencr_->joints_torque(opencr::ON);
-  opencr_->wheels_torque(opencr::ON);
-
-  opencr_->send_heartbeat(heartbeat_++);
+  usbdevice_->send_heartbeat(heartbeat_++);
   RCLCPP_INFO(logger, "Set profile acceleration and velocity to joints");
-  opencr_->set_joint_profile_acceleration(joints_acceleration_);
-  opencr_->set_joint_profile_velocity(joints_velocity_);
+  usbdevice_->set_joint_profile_acceleration(joints_acceleration_);
+  usbdevice_->set_joint_profile_velocity(joints_velocity_);
 
   RCLCPP_INFO(logger, "Set profile acceleration and velocity to gripper");
-  opencr_->set_gripper_profile_acceleration(gripper_acceleration_);
-  opencr_->set_gripper_profile_velocity(gripper_velocity_);
+  usbdevice_->set_gripper_profile_acceleration(gripper_acceleration_);
+  usbdevice_->set_gripper_profile_velocity(gripper_velocity_);
 
   RCLCPP_INFO(logger, "Set goal current value to gripper");
-  opencr_->set_gripper_current();
+  usbdevice_->set_gripper_current();
 
   RCLCPP_INFO(logger, "System starting");
-  opencr_->play_sound(opencr::SOUND::ASCENDING);
+  usbdevice_->play_sound(opencr::SOUND::ASCENDING);
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -209,7 +188,7 @@ hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
   RCLCPP_INFO(logger, "Ready for stop");
-  opencr_->play_sound(opencr::SOUND::DESCENDING);
+  usbdevice_->play_sound(opencr::SOUND::DESCENDING);
 
   RCLCPP_INFO(logger, "System stopped");
 
@@ -219,53 +198,28 @@ hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on
 hardware_interface::return_type OpenManipulatorManipulationSystemHardware::read(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-  RCLCPP_INFO_ONCE(logger, "Start to read wheels and manipulator states");
+  RCLCPP_INFO_ONCE(logger, "Start to read manipulator states");
 
-  if (opencr_->read_all() == false) {
+  if (usbdevice_->read_all() == false) {
     RCLCPP_WARN(logger, "Failed to read all control table");
   }
+  dxl_positions_[2] = usbdevice_->get_joint_positions()[opencr::joints::JOINT1];
+  dxl_velocities_[2] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT1];
 
-  dxl_positions_[0] = opencr_->get_wheel_positions()[opencr::wheels::LEFT];
-  dxl_velocities_[0] = opencr_->get_wheel_velocities()[opencr::wheels::LEFT];
+  dxl_positions_[3] = usbdevice_->get_joint_positions()[opencr::joints::JOINT2];
+  dxl_velocities_[3] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT2];
 
-  dxl_positions_[1] = opencr_->get_wheel_positions()[opencr::wheels::RIGHT];
-  dxl_velocities_[1] = opencr_->get_wheel_velocities()[opencr::wheels::RIGHT];
+  dxl_positions_[4] = usbdevice_->get_joint_positions()[opencr::joints::JOINT3];
+  dxl_velocities_[4] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT3];
 
-  dxl_positions_[2] = opencr_->get_joint_positions()[opencr::joints::JOINT1];
-  dxl_velocities_[2] = opencr_->get_joint_velocities()[opencr::joints::JOINT1];
+  dxl_positions_[5] = usbdevice_->get_joint_positions()[opencr::joints::JOINT4];
+  dxl_velocities_[5] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT4];
 
-  dxl_positions_[3] = opencr_->get_joint_positions()[opencr::joints::JOINT2];
-  dxl_velocities_[3] = opencr_->get_joint_velocities()[opencr::joints::JOINT2];
+  dxl_positions_[6] = usbdevice_->get_gripper_position();
+  dxl_velocities_[6] = usbdevice_->get_gripper_velocity();
 
-  dxl_positions_[4] = opencr_->get_joint_positions()[opencr::joints::JOINT3];
-  dxl_velocities_[4] = opencr_->get_joint_velocities()[opencr::joints::JOINT3];
-
-  dxl_positions_[5] = opencr_->get_joint_positions()[opencr::joints::JOINT4];
-  dxl_velocities_[5] = opencr_->get_joint_velocities()[opencr::joints::JOINT4];
-
-  dxl_positions_[6] = opencr_->get_gripper_position();
-  dxl_velocities_[6] = opencr_->get_gripper_velocity();
-
-  dxl_positions_[7] = opencr_->get_gripper_position();
-  dxl_velocities_[7] = opencr_->get_gripper_velocity();
-
-  opencr_sensor_states_[0] = opencr_->get_imu().orientation.x;
-  opencr_sensor_states_[1] = opencr_->get_imu().orientation.y;
-  opencr_sensor_states_[2] = opencr_->get_imu().orientation.z;
-  opencr_sensor_states_[3] = opencr_->get_imu().orientation.w;
-
-  opencr_sensor_states_[4] = opencr_->get_imu().angular_velocity.x;
-  opencr_sensor_states_[5] = opencr_->get_imu().angular_velocity.y;
-  opencr_sensor_states_[6] = opencr_->get_imu().angular_velocity.z;
-
-  opencr_sensor_states_[7] = opencr_->get_imu().linear_acceleration.x;
-  opencr_sensor_states_[8] = opencr_->get_imu().linear_acceleration.y;
-  opencr_sensor_states_[9] = opencr_->get_imu().linear_acceleration.z;
-
-  opencr_sensor_states_[10] = opencr_->get_battery().voltage;
-  opencr_sensor_states_[11] = opencr_->get_battery().percentage;
-  opencr_sensor_states_[12] = opencr_->get_battery().design_capacity;
-  opencr_sensor_states_[13] = opencr_->get_battery().present;
+  dxl_positions_[7] = usbdevice_->get_gripper_position();
+  dxl_velocities_[7] = usbdevice_->get_gripper_velocity();
 
   return hardware_interface::return_type::OK;
 }
@@ -273,18 +227,14 @@ hardware_interface::return_type OpenManipulatorManipulationSystemHardware::read(
 hardware_interface::return_type OpenManipulatorManipulationSystemHardware::write(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-  RCLCPP_INFO_ONCE(logger, "Start to write wheels and manipulator commands");
-  opencr_->send_heartbeat(heartbeat_++);
+  RCLCPP_INFO_ONCE(logger, "Start to write manipulator commands");
+  usbdevice_->send_heartbeat(heartbeat_++);
 
-  if (opencr_->set_wheel_velocities(dxl_wheel_commands_) == false) {
-    RCLCPP_ERROR(logger, "Can't control wheels");
-  }
-
-  if (opencr_->set_joint_positions(dxl_joint_commands_) == false) {
+  if (usbdevice_->set_joint_positions(dxl_joint_commands_) == false) {
     RCLCPP_ERROR(logger, "Can't control joints");
   }
 
-  if (opencr_->set_gripper_position(dxl_gripper_commands_[0]) == false) {
+  if (usbdevice_->set_gripper_position(dxl_gripper_commands_[0]) == false) {
     RCLCPP_ERROR(logger, "Can't control gripper");
   }
 

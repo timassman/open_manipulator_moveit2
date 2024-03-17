@@ -26,51 +26,6 @@ namespace open_manipulator_hardware
 {
 namespace opencr
 {
-struct IMU
-{
-  struct Vector
-  {
-    double x = 0.0;
-    double y = 0.0;
-    double z = 0.0;
-  };
-
-  struct Quaternion
-  {
-    double x = 0.0;
-    double y = 0.0;
-    double z = 0.0;
-    double w = 1.0;
-  };
-
-  Vector angular_velocity;
-  Vector linear_acceleration;
-  Quaternion orientation;
-};
-
-struct Battery
-{
-  double voltage = 0.0;
-  double percentage = 0.0;
-  double design_capacity = 0.0;
-  bool present = false;
-};
-
-namespace wheels
-{
-constexpr double SEPERATION = 0.287;
-constexpr double RADIUS = 0.033;
-
-// ref) http://emanual.robotis.com/docs/en/dxl/x/xl430-w250/#goal-velocity104
-constexpr double RPM_TO_MS = 0.229 * (2.0 * M_PI * RADIUS) / 60.0;
-
-// ref) https://emanual.robotis.com/docs/en/dxl/x/xl430-w250/#goal-position116
-constexpr double DEG_PER_PULSE = 0.087890625;
-constexpr double TICK_TO_RAD = DEG_PER_PULSE * M_PI / 180.0;
-
-constexpr uint8_t LEFT = 0;
-constexpr uint8_t RIGHT = 1;
-}  // namespace wheels
 
 namespace joints
 {

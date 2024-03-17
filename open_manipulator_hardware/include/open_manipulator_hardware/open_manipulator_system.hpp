@@ -32,6 +32,7 @@
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 
+#include "open_manipulator_hardware/usb_device.hpp"
 #include "open_manipulator_hardware/opencr.hpp"
 #include "open_manipulator_hardware/visibility_control.h"
 
@@ -83,9 +84,8 @@ private:
   int32_t gripper_acceleration_;
   int32_t gripper_velocity_;
 
-  std::unique_ptr<OpenCR> opencr_;
+  std::unique_ptr<UsbDevice> usbdevice_;
 
-  std::vector<double> dxl_wheel_commands_;
   std::vector<double> dxl_joint_commands_;
   std::vector<double> dxl_gripper_commands_;
 
