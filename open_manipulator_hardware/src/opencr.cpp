@@ -46,14 +46,14 @@ OpenCR::~OpenCR()
   joints_torque(opencr::OFF);
 }
 
-bool OpenCR::open_port(const std::string & usb_port)
+bool OpenCR::open_port(const std::string & usb_port, const uint32_t & baud_rate)
 {
-  return dxl_sdk_wrapper_->open_port(usb_port);
-}
-
-bool OpenCR::set_baud_rate(const uint32_t & baud_rate)
-{
-  return dxl_sdk_wrapper_->set_baud_rate(baud_rate);
+  if (!dxl_sdk_wrapper_->open_port(usb_port))
+  {
+    return false;
+  }
+  
+  return dxl_sdk_wrapper_->set_baud_rate(baud_rate);  
 }
 
 uint16_t OpenCR::ping()
@@ -237,7 +237,7 @@ bool OpenCR::set_joints_variables(
   return comm_result;
 }
 
-bool OpenCR::set_joint_positions(const std::vector<double> & radians)
+bool OpenCR::set_joint_positions(std::vector<double> & radians)
 {
   std::array<int32_t, 4> tick = {0, 0, 0, 0};
   for (uint8_t i = 0; i < radians.size(); i++) {
@@ -397,5 +397,37 @@ void OpenCR::send_heartbeat(const uint8_t & count)
 {
   this->write_byte(opencr_control_table.heartbeat.address, count);
 }
+
+int32_t OpenCR::get_data(const uint16_t & address, const uint16_t & length)
+{
+  int32_t data = 0;
+  uint8_t * p_data = reinterpret_cast<uint8_t *>(&data);
+
+  std::lock_guard<std::mutex> lock(buffer_m_);
+  switch (length) {
+    case 1:
+      p_data[0] = data_[address + 0];
+      break;
+
+    case 2:
+      p_data[0] = data_[address + 0];
+      p_data[1] = data_[address + 1];
+      break;
+
+    case 4:
+      p_data[0] = data_[address + 0];
+      p_data[1] = data_[address + 1];
+      p_data[2] = data_[address + 2];
+      p_data[3] = data_[address + 3];
+      break;
+
+    default:
+      p_data[0] = data_[address + 0];
+      break;
+  }
+
+  return data;
+}
+
 }  // namespace open_manipulator_hardware
 }  // namespace robotis

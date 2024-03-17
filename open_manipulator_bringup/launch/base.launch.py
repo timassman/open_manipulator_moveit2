@@ -84,6 +84,14 @@ def generate_launch_description():
     
     declared_arguments.append(
         DeclareLaunchArgument(
+            'usb_device',
+            default_value='"u2d2"',
+            description='Connected USB device (opencr or u2d2)'
+        )
+    )
+    
+    declared_arguments.append(
+        DeclareLaunchArgument(
            'baud_rate',
            default_value='"1000000"',
            description='Set Baudrate',
@@ -96,6 +104,7 @@ def generate_launch_description():
     use_fake_hardware = LaunchConfiguration('use_fake_hardware')
     fake_sensor_commands = LaunchConfiguration('fake_sensor_commands')
     usb_port = LaunchConfiguration('usb_port')
+    usb_device = LaunchConfiguration('usb_device')
     baud_rate = LaunchConfiguration('baud_rate')
 
     urdf_file = Command(
@@ -124,6 +133,9 @@ def generate_launch_description():
             ' ',
             'usb_port:=',
             usb_port,
+            ' ',
+            'usb_device:=',
+            usb_device,
             ' ',
             'baud_rate:=',
             baud_rate,

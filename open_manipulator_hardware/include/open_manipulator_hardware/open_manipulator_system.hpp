@@ -34,6 +34,7 @@
 
 #include "open_manipulator_hardware/usb_device.hpp"
 #include "open_manipulator_hardware/opencr.hpp"
+#include "open_manipulator_hardware/u2d2.hpp"
 #include "open_manipulator_hardware/visibility_control.h"
 
 namespace robotis
@@ -75,6 +76,7 @@ public:
 private:
   uint8_t id_;
   std::string usb_port_;
+  std::string usb_device_type_;
   uint32_t baud_rate_;
   uint8_t heartbeat_;
 
@@ -91,8 +93,6 @@ private:
 
   std::vector<double> dxl_positions_;
   std::vector<double> dxl_velocities_;
-
-  std::vector<double> opencr_sensor_states_;
 };
 }  // namespace open_manipulator_hardware
 }  // namespace robotis

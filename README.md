@@ -30,7 +30,17 @@ Build repository:
 
 ```
 cd ~/ros2_ws
-rosdep install -i --from-path src --rosdistro humble -y
+```
+
+On your robot, when using ARM chip, gazebo is not available (and not needed):
+```
+rosdep install -i -r --from-path src --rosdistro humble -y --skip-keys="gazebo_ros"
+```
+Otherwise, on your remote pc:
+```
+rosdep install -i -r --from-path src --rosdistro humble -y 
+```
+
 colcon build
 ```
 

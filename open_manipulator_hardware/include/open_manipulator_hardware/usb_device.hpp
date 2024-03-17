@@ -37,10 +37,7 @@ class UsbDevice
 public:
   virtual ~UsbDevice() { };
 
-  virtual int32_t get_data(const uint16_t & address, const uint16_t & length) = 0;
-
-  virtual bool open_port(const std::string & usb_port) = 0;
-  virtual bool set_baud_rate(const uint32_t & baud_rate) = 0;
+  virtual bool open_port(const std::string & usb_port, const uint32_t & baud_rate) = 0;
 
   virtual uint16_t ping() = 0;
 
@@ -58,7 +55,7 @@ public:
   virtual double get_gripper_position() = 0;
   virtual double get_gripper_velocity() = 0;
 
-  virtual bool set_joint_positions(const std::vector<double> & radians) = 0;
+  virtual bool set_joint_positions(std::vector<double> & radians) = 0;
   virtual bool set_joint_profile_acceleration(
     const std::array<int32_t, 4> & acceleration) = 0;
   virtual bool set_joint_profile_velocity(const std::array<int32_t, 4> & velocity) = 0;
@@ -79,8 +76,6 @@ public:
 
   virtual void send_heartbeat(const uint8_t & count) = 0;
 
-  virtual void write_byte(const uint16_t & address, uint8_t data) = 0;
-  virtual uint8_t read_byte(const uint16_t & address) = 0;
 };
 }  // namespace open_manipulator_hardware
 }  // namespace robotis

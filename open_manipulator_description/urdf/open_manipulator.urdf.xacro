@@ -8,6 +8,7 @@
   <xacro:arg name="fake_sensor_commands" default="false" />
   
   <xacro:arg name="usb_port" default="/dev/ttyUSB0" />
+  <xacro:arg name="usb_device" default="u2d2" />
   <xacro:arg name="baud_rate" default="1000000" />
 
   <!-- Import materials macro -->
@@ -30,6 +31,7 @@
     use_fake_hardware="$(arg use_fake_hardware)"
     fake_sensor_commands="$(arg fake_sensor_commands)"
     usb_port="$(arg usb_port)"
+    usb_device="$(arg usb_device)"
     baud_rate="$(arg baud_rate)"
     />
 

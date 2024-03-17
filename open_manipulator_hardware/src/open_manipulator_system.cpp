@@ -40,9 +40,10 @@ hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on
     return hardware_interface::CallbackReturn::ERROR;
   }
 
-  id_ = stoi(info_.hardware_parameters["opencr_id"]);
-  usb_port_ = info_.hardware_parameters["opencr_usb_port"];
-  baud_rate_ = stoi(info_.hardware_parameters["opencr_baud_rate"]);
+  id_ = stoi(info_.hardware_parameters["manipulator_id"]);
+  usb_port_ = info_.hardware_parameters["manipulator_usb_port"];
+  usb_device_type_ = info_.hardware_parameters["manipulator_usb_device"];
+  baud_rate_ = stoi(info_.hardware_parameters["manipulator_baud_rate"]);
   heartbeat_ = 0;
 
   joints_acceleration_[0] = stoi(info_.hardware_parameters["dxl_joints_profile_acceleration"]);
@@ -58,18 +59,26 @@ hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on
   gripper_acceleration_ = stoi(info_.hardware_parameters["dxl_gripper_profile_acceleration"]);
   gripper_velocity_ = stoi(info_.hardware_parameters["dxl_gripper_profile_velocity"]);
 
-  usbdevice_ = std::make_unique<OpenCR>(id_);
-  if (usbdevice_->open_port(usb_port_)) {
-    RCLCPP_INFO(logger, "Succeeded to open port %s", usb_port_.c_str());
-  } else {
-    RCLCPP_FATAL(logger, "Failed to open port %s", usb_port_.c_str());
+  if (usb_device_type_ == "opencr")
+  {
+    usbdevice_ = std::make_unique<OpenCR>(id_);
+    RCLCPP_INFO(logger, "Created USB device of type '%s'", usb_device_type_.c_str());
+  }
+  else if (usb_device_type_ == "u2d2")
+  {
+    usbdevice_ = std::make_unique<U2d2>();
+    RCLCPP_INFO(logger, "Created USB device of type '%s'", usb_device_type_.c_str());
+  }
+  else
+  {
+    RCLCPP_FATAL(logger, "USB device type %s should be either 'opencr' or 'u2d2'", usb_device_type_.c_str());
     return hardware_interface::CallbackReturn::ERROR;
   }
-
-  if (usbdevice_->set_baud_rate(baud_rate_)) {
-    RCLCPP_INFO(logger, "Succeeded to set baudrate");
+  
+  if (usbdevice_->open_port(usb_port_, baud_rate_)) {
+    RCLCPP_INFO(logger, "Succeeded to open port %s with baudrate %d", usb_port_.c_str(), baud_rate_);
   } else {
-    RCLCPP_FATAL(logger, "Failed to set baudrate");
+    RCLCPP_FATAL(logger, "Failed to open port %s with baudrate %d", usb_port_.c_str(), baud_rate_);
     return hardware_interface::CallbackReturn::ERROR;
   }
 
@@ -94,10 +103,7 @@ hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on
   dxl_positions_.resize(info_.joints.size(), 0.0);
   dxl_velocities_.resize(info_.joints.size(), 0.0);
 
-  opencr_sensor_states_.resize(
-    info_.sensors[0].state_interfaces.size() +
-    info_.sensors[1].state_interfaces.size(),
-    0.0);
+  RCLCPP_INFO(logger, "Manipulator init successful");
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -113,17 +119,6 @@ OpenManipulatorManipulationSystemHardware::export_state_interfaces()
     state_interfaces.emplace_back(
       hardware_interface::StateInterface(
         info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &dxl_velocities_[i]));
-  }
-
-  for (uint8_t i = 0, k = 0; i < info_.sensors.size(); i++) {
-    for (uint8_t j = 0; j < info_.sensors[i].state_interfaces.size(); j++) {
-      state_interfaces.emplace_back(
-        hardware_interface::StateInterface(
-          info_.sensors[i].name,
-          info_.sensors[i].state_interfaces[j].name,
-          &opencr_sensor_states_[k++])
-      );
-    }
   }
 
   return state_interfaces;

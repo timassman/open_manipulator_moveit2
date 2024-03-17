@@ -36,6 +36,10 @@ def generate_launch_description():
     
     # Usb port 'ttyUSB0' for U2D2, ttyACM0 for OpenCR
     usb_port = LaunchConfiguration('usb_port', default='/dev/ttyUSB0')
+    
+    # Usb device 'u2d2' for U2D2, 'opencr' for OpenCR
+    usb_device = LaunchConfiguration('usb_device', default='u2d2')
+    
     baud_rate = LaunchConfiguration('baud_rate', default='1000000')
 
     return LaunchDescription([
@@ -58,6 +62,11 @@ def generate_launch_description():
             'usb_port',
             default_value=usb_port,
             description='Connected USB port'),
+        
+        DeclareLaunchArgument(
+            'usb_device',
+            default_value=usb_device,
+            description='Connected USB device (opencr or u2d2)'),
 
         DeclareLaunchArgument(
            'baud_rate',
@@ -71,6 +80,7 @@ def generate_launch_description():
                 'prefix': prefix,
                 'use_fake_hardware': use_fake_hardware,
                 'usb_port': usb_port,
+                'usb_device': usb_device,
                 'baud_rate': baud_rate,
             }.items(),
         ),

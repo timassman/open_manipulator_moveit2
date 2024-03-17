@@ -16,6 +16,13 @@
   <depend>hardware_interface</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>open_manipulator_msgs</depend>
+  <depend>open_manipulator_x_libs</depend>
+  <depend>robotis_manipulator</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>trajectory_msgs</depend>
   <export>
     <build_type>ament_cmake</build_type>
   </export>

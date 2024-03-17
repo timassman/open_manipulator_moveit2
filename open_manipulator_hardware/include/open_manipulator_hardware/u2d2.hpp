@@ -14,8 +14,8 @@
 //
 // Author: Darby Lim
 
-#ifndef open_manipulator_HARDWARE__OPENCR_HPP_
-#define open_manipulator_HARDWARE__OPENCR_HPP_
+#ifndef open_manipulator_HARDWARE__U2D2_HPP_
+#define open_manipulator_HARDWARE__U2D2_HPP_
 
 #include <stdlib.h>
 #include <array>
@@ -24,21 +24,21 @@
 #include <string>
 #include <vector>
 
-#include "open_manipulator_hardware/dynamixel_sdk_wrapper.hpp"
-#include "open_manipulator_hardware/opencr_control_table.hpp"
-#include "open_manipulator_hardware/opencr_definitions.hpp"
-
 #include "open_manipulator_hardware/usb_device.hpp"
+#include "open_manipulator_x_libs/open_manipulator_x.hpp"
+
+#define JOINT_DYNAMIXEL "joint_dxl"
+#define TOOL_DYNAMIXEL  "tool_dxl"
 
 namespace robotis
 {
 namespace open_manipulator_hardware
 {
-class OpenCR : public UsbDevice
+class U2d2 : public UsbDevice
 {
 public:
-  explicit OpenCR(const uint8_t & id);
-  virtual ~OpenCR();
+  explicit U2d2();
+  virtual ~U2d2();
 
   bool open_port(const std::string & usb_port, const uint32_t & baud_rate) override;
 
@@ -80,27 +80,13 @@ public:
   void send_heartbeat(const uint8_t & count) override;
 
 private:
-  void write_byte(const uint16_t & address, uint8_t data);  
-  uint8_t read_byte(const uint16_t & address);
+  std::unique_ptr<OpenManipulatorX> open_manipulator_x_;
 
-  int32_t get_data(
-    const uint16_t & address,
-    const uint16_t & length);
+  std::vector<JointValue> joint_value_;
+  std::vector<JointValue> tool_value_;
 
-  bool set_joints_variables(
-    const uint16_t & address,
-    const std::array<int32_t, 4> & variables);
-
-  bool set_gripper_variables(
-    const uint16_t & address, const int32_t & variables);
-
-  std::unique_ptr<DynamixelSDKWrapper> dxl_sdk_wrapper_;
-
-  uint8_t data_[CONTROL_TABLE_SIZE];
-  uint8_t data_buffer_[CONTROL_TABLE_SIZE];
-
-  std::mutex buffer_m_;
+  std::vector<uint8_t> dxl_id_ = {11, 12, 13, 14, 15};
 };
 }  // namespace open_manipulator_hardware
 }  // namespace robotis
-#endif  // open_manipulator_HARDWARE__OPENCR_HPP_
+#endif  // open_manipulator_HARDWARE__U2D2_HPP_
