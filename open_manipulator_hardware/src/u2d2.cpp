@@ -155,7 +155,14 @@ bool U2d2::set_gripper_position(const double & meters)
 {
   auto tools_name = open_manipulator_x_->getManipulator()->getAllToolComponentName();
   double radian = meters / opencr::grippers::RAD_TO_METER;
-  open_manipulator_x_->makeToolTrajectory(tools_name[0], radian);
+  try
+  {
+    open_manipulator_x_->makeToolTrajectory(tools_name[0], radian);
+  }
+  catch(const std::exception& e)
+  {
+    std::cerr << e.what() << '\n';
+  }
 
   return true;
 }

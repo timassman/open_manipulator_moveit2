@@ -131,23 +131,23 @@ OpenManipulatorManipulationSystemHardware::export_command_interfaces()
 
   command_interfaces.emplace_back(
     hardware_interface::CommandInterface(
-      info_.joints[2].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[0]));
+      info_.joints[0].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[0]));
   command_interfaces.emplace_back(
     hardware_interface::CommandInterface(
-      info_.joints[3].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[1]));
+      info_.joints[1].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[1]));
   command_interfaces.emplace_back(
     hardware_interface::CommandInterface(
-      info_.joints[4].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[2]));
+      info_.joints[2].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[2]));
   command_interfaces.emplace_back(
     hardware_interface::CommandInterface(
-      info_.joints[5].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[3]));
+      info_.joints[3].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[3]));
 
   command_interfaces.emplace_back(
     hardware_interface::CommandInterface(
-      info_.joints[6].name, hardware_interface::HW_IF_POSITION, &dxl_gripper_commands_[0]));
+      info_.joints[4].name, hardware_interface::HW_IF_POSITION, &dxl_gripper_commands_[0]));
   command_interfaces.emplace_back(
     hardware_interface::CommandInterface(
-      info_.joints[7].name, hardware_interface::HW_IF_POSITION, &dxl_gripper_commands_[1]));
+      info_.joints[5].name, hardware_interface::HW_IF_POSITION, &dxl_gripper_commands_[1]));
 
   return command_interfaces;
 }
@@ -198,23 +198,28 @@ hardware_interface::return_type OpenManipulatorManipulationSystemHardware::read(
   if (usbdevice_->read_all() == false) {
     RCLCPP_WARN(logger, "Failed to read all control table");
   }
-  dxl_positions_[2] = usbdevice_->get_joint_positions()[opencr::joints::JOINT1];
-  dxl_velocities_[2] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT1];
+  dxl_positions_[0] = usbdevice_->get_joint_positions()[opencr::joints::JOINT1];
+  dxl_velocities_[0] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT1];
 
-  dxl_positions_[3] = usbdevice_->get_joint_positions()[opencr::joints::JOINT2];
-  dxl_velocities_[3] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT2];
+  dxl_positions_[1] = usbdevice_->get_joint_positions()[opencr::joints::JOINT2];
+  dxl_velocities_[1] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT2];
 
-  dxl_positions_[4] = usbdevice_->get_joint_positions()[opencr::joints::JOINT3];
-  dxl_velocities_[4] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT3];
+  dxl_positions_[2] = usbdevice_->get_joint_positions()[opencr::joints::JOINT3];
+  dxl_velocities_[2] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT3];
 
-  dxl_positions_[5] = usbdevice_->get_joint_positions()[opencr::joints::JOINT4];
-  dxl_velocities_[5] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT4];
+  dxl_positions_[3] = usbdevice_->get_joint_positions()[opencr::joints::JOINT4];
+  dxl_velocities_[3] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT4];
 
-  dxl_positions_[6] = usbdevice_->get_gripper_position();
-  dxl_velocities_[6] = usbdevice_->get_gripper_velocity();
+  dxl_positions_[4] = usbdevice_->get_gripper_position();
+  dxl_velocities_[4] = usbdevice_->get_gripper_velocity();
 
-  dxl_positions_[7] = usbdevice_->get_gripper_position();
-  dxl_velocities_[7] = usbdevice_->get_gripper_velocity();
+  dxl_positions_[5] = usbdevice_->get_gripper_position();
+  dxl_velocities_[5] = usbdevice_->get_gripper_velocity();
+
+  for(int i=0; i<info_.joints.size(); i++)
+  {
+    RCLCPP_INFO(logger, "Joint name: %s pos: %f vel: %f", info_.joints[i].name.c_str(), dxl_positions_[i], dxl_velocities_[i]);
+  }
 
   return hardware_interface::return_type::OK;
 }
