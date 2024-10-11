@@ -80,19 +80,21 @@ private:
   uint32_t baud_rate_;
   uint8_t heartbeat_;
 
-  std::array<int32_t, 4> joints_acceleration_;
-  std::array<int32_t, 4> joints_velocity_;
+  std::array<int32_t, ARM_JOINTS> joint_profile_acceleration_;
+  std::array<int32_t, ARM_JOINTS> joint_profile_velocity_;
 
   int32_t gripper_acceleration_;
   int32_t gripper_velocity_;
 
   std::unique_ptr<UsbDevice> usbdevice_;
 
-  std::vector<double> dxl_joint_commands_;
-  std::vector<double> dxl_gripper_commands_;
+  std::array<double, ARM_JOINTS> dxl_joint_state_positions_;
+  std::array<double, ARM_JOINTS> dxl_joint_state_velocities_;
+  std::array<double, ARM_JOINTS> dxl_joint_command_positions_;
 
-  std::vector<double> dxl_positions_;
-  std::vector<double> dxl_velocities_;
+  double dxl_gripper_state_position_;
+  double dxl_gripper_state_velocity_;
+  double dxl_gripper_command_position_;
 };
 }  // namespace open_manipulator_hardware
 }  // namespace robotis

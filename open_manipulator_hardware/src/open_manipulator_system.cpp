@@ -19,6 +19,7 @@
 #include <cmath>
 #include <memory>
 #include <vector>
+#include <algorithm>
 
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -27,223 +28,283 @@
 
 namespace robotis
 {
-namespace open_manipulator_hardware
-{
-auto logger = rclcpp::get_logger("open_manipulator");
-hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on_init(
-  const hardware_interface::HardwareInfo & info)
-{
-  if (
-    hardware_interface::SystemInterface::on_init(info) !=
-    hardware_interface::CallbackReturn::SUCCESS)
+  namespace open_manipulator_hardware
   {
-    return hardware_interface::CallbackReturn::ERROR;
-  }
+    auto logger = rclcpp::get_logger("open_manipulator");
+    hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on_init(
+        const hardware_interface::HardwareInfo &info)
+    {
+      if (
+          hardware_interface::SystemInterface::on_init(info) !=
+          hardware_interface::CallbackReturn::SUCCESS)
+      {
+        return hardware_interface::CallbackReturn::ERROR;
+      }
 
-  id_ = stoi(info_.hardware_parameters["manipulator_id"]);
-  usb_port_ = info_.hardware_parameters["manipulator_usb_port"];
-  usb_device_type_ = info_.hardware_parameters["manipulator_usb_device"];
-  baud_rate_ = stoi(info_.hardware_parameters["manipulator_baud_rate"]);
-  heartbeat_ = 0;
+      id_ = stoi(info_.hardware_parameters["manipulator_id"]);
+      usb_port_ = info_.hardware_parameters["manipulator_usb_port"];
+      usb_device_type_ = info_.hardware_parameters["manipulator_usb_device"];
+      baud_rate_ = stoi(info_.hardware_parameters["manipulator_baud_rate"]);
+      heartbeat_ = 0;
 
-  joints_acceleration_[0] = stoi(info_.hardware_parameters["dxl_joints_profile_acceleration"]);
-  joints_acceleration_[1] = stoi(info_.hardware_parameters["dxl_joints_profile_acceleration"]);
-  joints_acceleration_[2] = stoi(info_.hardware_parameters["dxl_joints_profile_acceleration"]);
-  joints_acceleration_[3] = stoi(info_.hardware_parameters["dxl_joints_profile_acceleration"]);
+      for (size_t i = 0; i < ARM_JOINTS; i++)
+      {
+        joint_profile_acceleration_[i] = stoi(info_.hardware_parameters["dxl_joints_profile_acceleration"]);
+        joint_profile_velocity_[i] = stoi(info_.hardware_parameters["dxl_joints_profile_velocity"]);
+      }
 
-  joints_velocity_[0] = stoi(info_.hardware_parameters["dxl_joints_profile_velocity"]);
-  joints_velocity_[1] = stoi(info_.hardware_parameters["dxl_joints_profile_velocity"]);
-  joints_velocity_[2] = stoi(info_.hardware_parameters["dxl_joints_profile_velocity"]);
-  joints_velocity_[3] = stoi(info_.hardware_parameters["dxl_joints_profile_velocity"]);
+      gripper_acceleration_ = stoi(info_.hardware_parameters["dxl_gripper_profile_acceleration"]);
+      gripper_velocity_ = stoi(info_.hardware_parameters["dxl_gripper_profile_velocity"]);
 
-  gripper_acceleration_ = stoi(info_.hardware_parameters["dxl_gripper_profile_acceleration"]);
-  gripper_velocity_ = stoi(info_.hardware_parameters["dxl_gripper_profile_velocity"]);
+      if (usb_device_type_ == "opencr")
+      {
+        usbdevice_ = std::make_unique<OpenCR>(id_);
+        RCLCPP_INFO(logger, "Created USB device of type '%s'", usb_device_type_.c_str());
+      }
+      else if (usb_device_type_ == "u2d2")
+      {
+        usbdevice_ = std::make_unique<U2d2>();
+        RCLCPP_INFO(logger, "Created USB device of type '%s'", usb_device_type_.c_str());
+      }
+      else
+      {
+        RCLCPP_FATAL(logger, "USB device type %s should be either 'opencr' or 'u2d2'", usb_device_type_.c_str());
+        return hardware_interface::CallbackReturn::ERROR;
+      }
 
-  if (usb_device_type_ == "opencr")
-  {
-    usbdevice_ = std::make_unique<OpenCR>(id_);
-    RCLCPP_INFO(logger, "Created USB device of type '%s'", usb_device_type_.c_str());
-  }
-  else if (usb_device_type_ == "u2d2")
-  {
-    usbdevice_ = std::make_unique<U2d2>();
-    RCLCPP_INFO(logger, "Created USB device of type '%s'", usb_device_type_.c_str());
-  }
-  else
-  {
-    RCLCPP_FATAL(logger, "USB device type %s should be either 'opencr' or 'u2d2'", usb_device_type_.c_str());
-    return hardware_interface::CallbackReturn::ERROR;
-  }
-  
-  if (usbdevice_->open_port(usb_port_, baud_rate_)) {
-    RCLCPP_INFO(logger, "Succeeded to open port %s with baudrate %d", usb_port_.c_str(), baud_rate_);
-  } else {
-    RCLCPP_FATAL(logger, "Failed to open port %s with baudrate %d", usb_port_.c_str(), baud_rate_);
-    return hardware_interface::CallbackReturn::ERROR;
-  }
+      if (usbdevice_->open_port(usb_port_, baud_rate_))
+      {
+        RCLCPP_INFO(logger, "Succeeded to open port %s with baudrate %d", usb_port_.c_str(), baud_rate_);
+      }
+      else
+      {
+        RCLCPP_FATAL(logger, "Failed to open port %s with baudrate %d", usb_port_.c_str(), baud_rate_);
+        return hardware_interface::CallbackReturn::ERROR;
+      }
 
-  int32_t model_number = usbdevice_->ping();
-  RCLCPP_INFO(logger, "OpenCR Model Number %d", model_number);
+      int32_t model_number = usbdevice_->ping();
+      RCLCPP_INFO(logger, "OpenCR Model Number %d", model_number);
 
-  if (usbdevice_->is_connect_manipulator()) {
-    RCLCPP_INFO(logger, "Connected manipulator");
-  } else {
-    RCLCPP_FATAL(logger, "Not connected manipulator");
-    return hardware_interface::CallbackReturn::ERROR;
-  }
+      if (usbdevice_->is_connect_manipulator())
+      {
+        RCLCPP_INFO(logger, "Connected manipulator");
+      }
+      else
+      {
+        RCLCPP_FATAL(logger, "Not connected manipulator");
+        return hardware_interface::CallbackReturn::ERROR;
+      }
 
-  dxl_joint_commands_.resize(4, 0.0);
-  dxl_joint_commands_[0] = 0.0;
-  dxl_joint_commands_[1] = -1.57;
-  dxl_joint_commands_[2] = 1.37;
-  dxl_joint_commands_[3] = 0.26;
+      for (const hardware_interface::ComponentInfo &joint : info_.joints)
+      {
+        // Open manipulator has exactly two states and one command interface on each joint
+        if (joint.command_interfaces.size() != 1)
+        {
+          RCLCPP_FATAL(
+              rclcpp::get_logger("OpenManipulatorManipulationSystemHardware"),
+              "Joint '%s' has %zu command interfaces found. 1 expected.", joint.name.c_str(),
+              joint.command_interfaces.size());
+          return hardware_interface::CallbackReturn::ERROR;
+        }
 
-  dxl_gripper_commands_.resize(2, 0.0);
+        if (joint.command_interfaces[0].name != hardware_interface::HW_IF_POSITION)
+        {
+          RCLCPP_FATAL(
+              rclcpp::get_logger("OpenManipulatorManipulationSystemHardware"),
+              "Joint '%s' have %s command interfaces found. '%s' expected.", joint.name.c_str(),
+              joint.command_interfaces[0].name.c_str(), hardware_interface::HW_IF_VELOCITY);
+          return hardware_interface::CallbackReturn::ERROR;
+        }
 
-  dxl_positions_.resize(info_.joints.size(), 0.0);
-  dxl_velocities_.resize(info_.joints.size(), 0.0);
+        if (joint.state_interfaces.size() != 2)
+        {
+          RCLCPP_FATAL(
+              rclcpp::get_logger("OpenManipulatorManipulationSystemHardware"),
+              "Joint '%s' has %zu state interface. 2 expected.", joint.name.c_str(),
+              joint.state_interfaces.size());
+          return hardware_interface::CallbackReturn::ERROR;
+        }
 
-  RCLCPP_INFO(logger, "Manipulator init successful");
+        if (joint.state_interfaces[0].name != hardware_interface::HW_IF_POSITION)
+        {
+          RCLCPP_FATAL(
+              rclcpp::get_logger("OpenManipulatorManipulationSystemHardware"),
+              "Joint '%s' have '%s' as first state interface. '%s' expected.", joint.name.c_str(),
+              joint.state_interfaces[0].name.c_str(), hardware_interface::HW_IF_POSITION);
+          return hardware_interface::CallbackReturn::ERROR;
+        }
 
-  return hardware_interface::CallbackReturn::SUCCESS;
-}
+        if (joint.state_interfaces[1].name != hardware_interface::HW_IF_VELOCITY)
+        {
+          RCLCPP_FATAL(
+              rclcpp::get_logger("OpenManipulatorManipulationSystemHardware"),
+              "Joint '%s' have '%s' as second state interface. '%s' expected.", joint.name.c_str(),
+              joint.state_interfaces[1].name.c_str(), hardware_interface::HW_IF_VELOCITY);
+          return hardware_interface::CallbackReturn::ERROR;
+        }
+      }
 
-std::vector<hardware_interface::StateInterface>
-OpenManipulatorManipulationSystemHardware::export_state_interfaces()
-{
-  std::vector<hardware_interface::StateInterface> state_interfaces;
-  for (uint8_t i = 0; i < info_.joints.size(); i++) {
-    state_interfaces.emplace_back(
-      hardware_interface::StateInterface(
-        info_.joints[i].name, hardware_interface::HW_IF_POSITION, &dxl_positions_[i]));
-    state_interfaces.emplace_back(
-      hardware_interface::StateInterface(
-        info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &dxl_velocities_[i]));
-  }
+      RCLCPP_INFO(logger, "Manipulator init successful");
 
-  return state_interfaces;
-}
+      return hardware_interface::CallbackReturn::SUCCESS;
+    }
 
-std::vector<hardware_interface::CommandInterface>
-OpenManipulatorManipulationSystemHardware::export_command_interfaces()
-{
-  std::vector<hardware_interface::CommandInterface> command_interfaces;
+    std::vector<hardware_interface::StateInterface>
+    OpenManipulatorManipulationSystemHardware::export_state_interfaces()
+    {
+      std::vector<hardware_interface::StateInterface> state_interfaces;
 
-  command_interfaces.emplace_back(
-    hardware_interface::CommandInterface(
-      info_.joints[0].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[0]));
-  command_interfaces.emplace_back(
-    hardware_interface::CommandInterface(
-      info_.joints[1].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[1]));
-  command_interfaces.emplace_back(
-    hardware_interface::CommandInterface(
-      info_.joints[2].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[2]));
-  command_interfaces.emplace_back(
-    hardware_interface::CommandInterface(
-      info_.joints[3].name, hardware_interface::HW_IF_POSITION, &dxl_joint_commands_[3]));
+      for (size_t i = 0; i < ARM_JOINTS; i++)
+      {
+        RCLCPP_INFO(logger, "Exporting state interfaces for %s", info_.joints[i].name.c_str());
+        state_interfaces.emplace_back(
+            hardware_interface::StateInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_POSITION, &dxl_joint_state_positions_[i]));
+        state_interfaces.emplace_back(
+            hardware_interface::StateInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &dxl_joint_state_velocities_[i]));
+      }
 
-  command_interfaces.emplace_back(
-    hardware_interface::CommandInterface(
-      info_.joints[4].name, hardware_interface::HW_IF_POSITION, &dxl_gripper_commands_[0]));
-  command_interfaces.emplace_back(
-    hardware_interface::CommandInterface(
-      info_.joints[5].name, hardware_interface::HW_IF_POSITION, &dxl_gripper_commands_[1]));
+      for (size_t i = ARM_JOINTS; i < ARM_JOINTS + GRIPPER_JOINTS_ROS; i++)
+      {
+        // use single gripper state for both gripper joints
+        RCLCPP_INFO(logger, "Exporting state interfaces for %s", info_.joints[i].name.c_str());
+        state_interfaces.emplace_back(
+            hardware_interface::StateInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_POSITION, &dxl_gripper_state_position_));
+        state_interfaces.emplace_back(
+            hardware_interface::StateInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &dxl_gripper_state_velocity_));
+      }
 
-  return command_interfaces;
-}
+      return state_interfaces;
+    }
 
-hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on_activate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
-{
-  RCLCPP_INFO(logger, "Ready for start");
-  usbdevice_->send_heartbeat(heartbeat_++);
+    std::vector<hardware_interface::CommandInterface>
+    OpenManipulatorManipulationSystemHardware::export_command_interfaces()
+    {
+      std::vector<hardware_interface::CommandInterface> command_interfaces;
 
-  RCLCPP_INFO(logger, "Joints torque ON");
-  usbdevice_->joints_torque(opencr::ON);
+      for (size_t i = 0; i < ARM_JOINTS; i++)
+      {
+        RCLCPP_INFO(logger, "Exporting command interfaces for %s", info_.joints[i].name.c_str());
+        command_interfaces.emplace_back(
+            hardware_interface::CommandInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_POSITION, &dxl_joint_command_positions_[i]));
+      }
 
-  usbdevice_->send_heartbeat(heartbeat_++);
-  RCLCPP_INFO(logger, "Set profile acceleration and velocity to joints");
-  usbdevice_->set_joint_profile_acceleration(joints_acceleration_);
-  usbdevice_->set_joint_profile_velocity(joints_velocity_);
+      for (size_t i = ARM_JOINTS; i < ARM_JOINTS + GRIPPER_JOINTS_ROS; i++)
+      {
+        // use single gripper command position for both gripper joints
+        RCLCPP_INFO(logger, "Exporting command interfaces for %s", info_.joints[i].name.c_str());
+        command_interfaces.emplace_back(
+            hardware_interface::CommandInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_POSITION, &dxl_gripper_command_position_));
+      }
 
-  RCLCPP_INFO(logger, "Set profile acceleration and velocity to gripper");
-  usbdevice_->set_gripper_profile_acceleration(gripper_acceleration_);
-  usbdevice_->set_gripper_profile_velocity(gripper_velocity_);
+      return command_interfaces;
+    }
 
-  RCLCPP_INFO(logger, "Set goal current value to gripper");
-  usbdevice_->set_gripper_current();
+    hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on_activate(
+        const rclcpp_lifecycle::State & /*previous_state*/)
+    {
+      RCLCPP_INFO(logger, "Ready for start");
+      usbdevice_->send_heartbeat(heartbeat_++);
 
-  RCLCPP_INFO(logger, "System starting");
-  usbdevice_->play_sound(opencr::SOUND::ASCENDING);
+      RCLCPP_INFO(logger, "Joints torque ON");
+      usbdevice_->joints_torque(opencr::ON);
 
-  return hardware_interface::CallbackReturn::SUCCESS;
-}
+      usbdevice_->send_heartbeat(heartbeat_++);
+      RCLCPP_INFO(logger, "Set profile acceleration and velocity to joints");
+      usbdevice_->set_joint_profile_acceleration(joint_profile_acceleration_);
+      usbdevice_->set_joint_profile_velocity(joint_profile_velocity_);
 
-hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on_deactivate(
-  const rclcpp_lifecycle::State & /*previous_state*/)
-{
-  RCLCPP_INFO(logger, "Ready for stop");
-  usbdevice_->play_sound(opencr::SOUND::DESCENDING);
+      RCLCPP_INFO(logger, "Set profile acceleration and velocity to gripper");
+      usbdevice_->set_gripper_profile_acceleration(gripper_acceleration_);
+      usbdevice_->set_gripper_profile_velocity(gripper_velocity_);
+      usbdevice_->set_gripper_current();
 
-  RCLCPP_INFO(logger, "System stopped");
+      RCLCPP_INFO(logger, "System starting");
+      usbdevice_->play_sound(opencr::SOUND::ASCENDING);
 
-  return hardware_interface::CallbackReturn::SUCCESS;
-}
+      // set goal to current state, so the arm won't move
+      usbdevice_->get_joint_positions(dxl_joint_command_positions_);
+      usbdevice_->get_gripper_position(dxl_gripper_command_position_);
 
-hardware_interface::return_type OpenManipulatorManipulationSystemHardware::read(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
-{
-  RCLCPP_INFO_ONCE(logger, "Start to read manipulator states");
+      return hardware_interface::CallbackReturn::SUCCESS;
+    }
 
-  if (usbdevice_->read_all() == false) {
-    RCLCPP_WARN(logger, "Failed to read all control table");
-  }
-  dxl_positions_[0] = usbdevice_->get_joint_positions()[opencr::joints::JOINT1];
-  dxl_velocities_[0] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT1];
+    hardware_interface::CallbackReturn OpenManipulatorManipulationSystemHardware::on_deactivate(
+        const rclcpp_lifecycle::State & /*previous_state*/)
+    {
+      RCLCPP_INFO(logger, "Ready for stop");
+      usbdevice_->play_sound(opencr::SOUND::DESCENDING);
 
-  dxl_positions_[1] = usbdevice_->get_joint_positions()[opencr::joints::JOINT2];
-  dxl_velocities_[1] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT2];
+      RCLCPP_INFO(logger, "System stopped");
 
-  dxl_positions_[2] = usbdevice_->get_joint_positions()[opencr::joints::JOINT3];
-  dxl_velocities_[2] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT3];
+      return hardware_interface::CallbackReturn::SUCCESS;
+    }
 
-  dxl_positions_[3] = usbdevice_->get_joint_positions()[opencr::joints::JOINT4];
-  dxl_velocities_[3] = usbdevice_->get_joint_velocities()[opencr::joints::JOINT4];
+    hardware_interface::return_type OpenManipulatorManipulationSystemHardware::read(
+        const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+    {
+      RCLCPP_INFO_ONCE(logger, "Start to read manipulator states");
 
-  dxl_positions_[4] = usbdevice_->get_gripper_position();
-  dxl_velocities_[4] = usbdevice_->get_gripper_velocity();
+      if (usbdevice_->read_all() == false)
+      {
+        RCLCPP_WARN(logger, "Failed to read all control table");
+      }
 
-  dxl_positions_[5] = usbdevice_->get_gripper_position();
-  dxl_velocities_[5] = usbdevice_->get_gripper_velocity();
+      usbdevice_->get_joint_positions(dxl_joint_state_positions_);
+      usbdevice_->get_joint_velocities(dxl_joint_state_velocities_);
 
-  for(int i=0; i<info_.joints.size(); i++)
-  {
-    RCLCPP_INFO(logger, "Joint name: %s pos: %f vel: %f", info_.joints[i].name.c_str(), dxl_positions_[i], dxl_velocities_[i]);
-  }
+      size_t joint_i;
+      for (joint_i = 0; joint_i < ARM_JOINTS; joint_i++)
+      {
+        RCLCPP_INFO(logger, "Joint name: %s current pos: %f vel: %f", info_.joints[joint_i].name.c_str(), dxl_joint_state_positions_[joint_i], dxl_joint_state_velocities_[joint_i]);
+      }
 
-  return hardware_interface::return_type::OK;
-}
+      usbdevice_->get_gripper_position(dxl_gripper_state_position_);
+      usbdevice_->get_gripper_velocity(dxl_gripper_state_velocity_);
 
-hardware_interface::return_type OpenManipulatorManipulationSystemHardware::write(
-  const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
-{
-  RCLCPP_INFO_ONCE(logger, "Start to write manipulator commands");
-  usbdevice_->send_heartbeat(heartbeat_++);
+      joint_i++;
+      RCLCPP_INFO(logger, "Gripper name: %s current pos: %f vel: %f", info_.joints[joint_i].name.c_str(), dxl_gripper_state_position_, dxl_gripper_state_velocity_);
 
-  if (usbdevice_->set_joint_positions(dxl_joint_commands_) == false) {
-    RCLCPP_ERROR(logger, "Can't control joints");
-  }
+      return hardware_interface::return_type::OK;
+    }
 
-  if (usbdevice_->set_gripper_position(dxl_gripper_commands_[0]) == false) {
-    RCLCPP_ERROR(logger, "Can't control gripper");
-  }
+    hardware_interface::return_type OpenManipulatorManipulationSystemHardware::write(
+        const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
+    {
+      RCLCPP_INFO_ONCE(logger, "Start to write manipulator commands");
 
-  return hardware_interface::return_type::OK;
-}
-}  // namespace open_manipulator_hardware
-}  // namespace robotis
+      usbdevice_->send_heartbeat(heartbeat_++);
+
+      if (!usbdevice_->set_joint_positions(dxl_joint_command_positions_))
+      {
+        RCLCPP_ERROR(logger, "Can't control joints");
+      }
+
+      size_t joint_i;
+      for (joint_i = 0; joint_i < ARM_JOINTS; joint_i++)
+      {
+        RCLCPP_INFO(logger, "Joint name: %s goal pos: %f", info_.joints[joint_i].name.c_str(), dxl_joint_command_positions_[joint_i]);
+      }
+
+      if (!usbdevice_->set_gripper_position(dxl_gripper_command_position_))
+      {
+        RCLCPP_ERROR(logger, "Can't control gripper");
+      }
+
+      joint_i++;
+      RCLCPP_INFO(logger, "Gripper name: %s goal pos: %f", info_.joints[joint_i].name.c_str(), dxl_gripper_command_position_);
+
+      return hardware_interface::return_type::OK;
+    }
+  } // namespace open_manipulator_hardware
+} // namespace robotis
 
 #include "pluginlib/class_list_macros.hpp"
 PLUGINLIB_EXPORT_CLASS(
-  robotis::open_manipulator_hardware::OpenManipulatorManipulationSystemHardware,
-  hardware_interface::SystemInterface)
+    robotis::open_manipulator_hardware::OpenManipulatorManipulationSystemHardware,
+    hardware_interface::SystemInterface)

@@ -32,75 +32,73 @@
 
 namespace robotis
 {
-namespace open_manipulator_hardware
-{
-class OpenCR : public UsbDevice
-{
-public:
-  explicit OpenCR(const uint8_t & id);
-  virtual ~OpenCR();
+  namespace open_manipulator_hardware
+  {
+    class OpenCR : public UsbDevice
+    {
+    public:
+      explicit OpenCR(const uint8_t &id);
+      virtual ~OpenCR();
 
-  bool open_port(const std::string & usb_port, const uint32_t & baud_rate) override;
+      bool open_port(const std::string &usb_port, const uint32_t &baud_rate) override;
 
-  uint16_t ping() override;
+      uint16_t ping() override;
 
-  bool is_connect_manipulator() override;
+      bool is_connect_manipulator() override;
 
-  void play_sound(uint8_t sound) const override;
+      void play_sound(uint8_t sound) const override;
 
-  void joints_torque(uint8_t onoff) const override;
+      void joints_torque(uint8_t onoff) const override;
 
-  bool read_all() override;
+      bool read_all() override;
 
-  std::array<double, 4> get_joint_positions() override;
-  std::array<double, 4> get_joint_velocities() override;
+      void get_joint_positions(std::array<double, ARM_JOINTS> &joint_positions) override;
+      void get_joint_velocities(std::array<double, ARM_JOINTS> &joint_velocities) override;
+      bool set_joint_positions(std::array<double, ARM_JOINTS> &joint_goals) override;
+      bool set_joint_profile_acceleration(
+          const std::array<int32_t, 4> &acceleration) override;
+      bool set_joint_profile_velocity(const std::array<int32_t, 4> &velocity) override;
 
-  double get_gripper_position() override;
-  double get_gripper_velocity() override;
+      void get_gripper_position(double &meter) override;
+      void get_gripper_velocity(double &meter_per_second) override;
+      bool set_gripper_position(double meter) override;
+      bool set_gripper_profile_acceleration(const int32_t &acceleration) override;
+      bool set_gripper_profile_velocity(const int32_t &velocity) override;
 
-  bool set_joint_positions(std::vector<double> & radians) override;
-  bool set_joint_profile_acceleration(
-    const std::array<int32_t, 4> & acceleration) override;
-  bool set_joint_profile_velocity(const std::array<int32_t, 4> & velocity) override;
+      bool set_home_pose() override;
+      bool set_init_pose() override;
+      bool set_zero_pose() override;
 
-  bool set_gripper_position(const double & meters) override;
-  bool set_gripper_profile_acceleration(const int32_t & acceleration) override;
-  bool set_gripper_profile_velocity(const int32_t & velocity) override;
+      bool set_gripper_current() override;
 
-  bool set_home_pose() override;
-  bool set_init_pose() override;
-  bool set_zero_pose() override;
+      bool open_gripper() override;
+      bool close_gripper() override;
+      bool init_gripper() override;
 
-  bool set_gripper_current() override;
+      void send_heartbeat(const uint8_t &count) override;
 
-  bool open_gripper() override;
-  bool close_gripper() override;
-  bool init_gripper() override;
+    private:
+      void write_byte(const uint16_t &address, uint8_t data);
+      uint8_t read_byte(const uint16_t &address);
 
-  void send_heartbeat(const uint8_t & count) override;
+      int32_t get_data(
+          const uint16_t &address,
+          const uint16_t &length);
 
-private:
-  void write_byte(const uint16_t & address, uint8_t data);  
-  uint8_t read_byte(const uint16_t & address);
+      bool set_joints_variables(
+          const uint16_t &address,
+          const std::array<int32_t, 4> &variables);
 
-  int32_t get_data(
-    const uint16_t & address,
-    const uint16_t & length);
+      bool set_gripper_variables(
+          const uint16_t &address, const int32_t &variables);
 
-  bool set_joints_variables(
-    const uint16_t & address,
-    const std::array<int32_t, 4> & variables);
+      std::unique_ptr<DynamixelSDKWrapper> dxl_sdk_wrapper_;
 
-  bool set_gripper_variables(
-    const uint16_t & address, const int32_t & variables);
+      uint8_t data_[CONTROL_TABLE_SIZE];
+      uint8_t data_buffer_[CONTROL_TABLE_SIZE];
 
-  std::unique_ptr<DynamixelSDKWrapper> dxl_sdk_wrapper_;
-
-  uint8_t data_[CONTROL_TABLE_SIZE];
-  uint8_t data_buffer_[CONTROL_TABLE_SIZE];
-
-  std::mutex buffer_m_;
-};
-}  // namespace open_manipulator_hardware
-}  // namespace robotis
-#endif  // open_manipulator_HARDWARE__OPENCR_HPP_
+      std::mutex buffer_m_;
+    };
+  } // namespace open_manipulator_hardware
+} // namespace robotis
+#endif // open_manipulator_HARDWARE__OPENCR_HPP_

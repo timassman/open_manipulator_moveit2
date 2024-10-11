@@ -132,10 +132,8 @@ inline double convert_tick_to_radian(
   return radian;
 }
 
-std::array<double, 4> OpenCR::get_joint_positions()
+void OpenCR::get_joint_positions(std::array<double, ARM_JOINTS> &joint_positions)
 {
-  std::array<double, 4> positions = {0.0, 0.0, 0.0, 0.0};
-
   std::array<int32_t, 4> ticks = {
     get_data(
       opencr_control_table.present_position_joint_1.address,
@@ -152,21 +150,17 @@ std::array<double, 4> OpenCR::get_joint_positions()
   };
 
   for (uint8_t i = 0; i < ticks.size(); i++) {
-    positions[i] = convert_tick_to_radian(
+    joint_positions[i] = convert_tick_to_radian(
       ticks[i],
       opencr::joints::MAX_TICK,
       opencr::joints::MIN_TICK,
       opencr::joints::MAX_RADIAN,
       opencr::joints::MIN_RADIAN);
   }
-
-  return positions;
 }
 
-std::array<double, 4> OpenCR::get_joint_velocities()
+void OpenCR::get_joint_velocities(std::array<double, ARM_JOINTS> &joint_velocities)
 {
-  std::array<double, 4> velocities = {0.0, 0.0, 0.0, 0.0};
-
   std::array<int32_t, 4> rpms = {
     get_data(
       opencr_control_table.present_velocity_joint_1.address,
@@ -183,13 +177,11 @@ std::array<double, 4> OpenCR::get_joint_velocities()
   };
 
   for (uint8_t i = 0; i < rpms.size(); i++) {
-    velocities[i] = rpms[i] * opencr::joints::RPM_TO_RAD_PER_SEC;
+    joint_velocities[i] = rpms[i] * opencr::joints::RPM_TO_RAD_PER_SEC;
   }
-
-  return velocities;
 }
 
-double OpenCR::get_gripper_position()
+void OpenCR::get_gripper_position(double &meter)
 {
   double radian = 0.0;
 
@@ -204,18 +196,16 @@ double OpenCR::get_gripper_position()
     opencr::joints::MAX_RADIAN,
     opencr::joints::MIN_RADIAN);
 
-  return radian * opencr::grippers::RAD_TO_METER;
+  meter = radian * opencr::grippers::RAD_TO_METER;
 }
 
-double OpenCR::get_gripper_velocity()
+void OpenCR::get_gripper_velocity(double &meter_per_second)
 {
-  double velocity = 0.0;
-
   int32_t rpm = get_data(
     opencr_control_table.present_velocity_gripper.address,
     opencr_control_table.present_velocity_gripper.length);
 
-  return velocity = rpm * opencr::joints::RPM_TO_RAD_PER_SEC;
+  meter_per_second = rpm * opencr::joints::RPM_TO_RAD_PER_SEC * opencr::grippers::RAD_TO_METER;
 }
 
 bool OpenCR::set_joints_variables(
@@ -237,12 +227,12 @@ bool OpenCR::set_joints_variables(
   return comm_result;
 }
 
-bool OpenCR::set_joint_positions(std::vector<double> & radians)
+bool OpenCR::set_joint_positions(std::array<double, ARM_JOINTS> &joint_goals)
 {
   std::array<int32_t, 4> tick = {0, 0, 0, 0};
-  for (uint8_t i = 0; i < radians.size(); i++) {
+  for (uint8_t i = 0; i < joint_goals.size(); i++) {
     tick[i] = convert_radian_to_tick(
-      radians[i],
+      joint_goals[i],
       opencr::joints::MAX_TICK,
       opencr::joints::MIN_TICK,
       opencr::joints::MAX_RADIAN,
@@ -257,7 +247,7 @@ bool OpenCR::set_joint_positions(std::vector<double> & radians)
   return comm_result;
 }
 
-bool OpenCR::set_joint_profile_acceleration(const std::array<int32_t, 4> & acceleration)
+bool OpenCR::set_joint_profile_acceleration(const std::array<int32_t, ARM_JOINTS> & acceleration)
 {
   bool comm_result = set_joints_variables(
     opencr_control_table.profile_acceleration_joint_1.address, acceleration);
@@ -267,7 +257,7 @@ bool OpenCR::set_joint_profile_acceleration(const std::array<int32_t, 4> & accel
   return comm_result;
 }
 
-bool OpenCR::set_joint_profile_velocity(const std::array<int32_t, 4> & velocity)
+bool OpenCR::set_joint_profile_velocity(const std::array<int32_t, ARM_JOINTS> & velocity)
 {
   bool comm_result = set_joints_variables(
     opencr_control_table.profile_velocity_joint_1.address, velocity);
@@ -292,9 +282,9 @@ bool OpenCR::set_gripper_variables(const uint16_t & address, const int32_t & var
   return comm_result;
 }
 
-bool OpenCR::set_gripper_position(const double & meters)
+bool OpenCR::set_gripper_position(double meter)
 {
-  double radian = meters / opencr::grippers::RAD_TO_METER;
+  double radian = meter / opencr::grippers::RAD_TO_METER;
   int32_t tick = convert_radian_to_tick(
     radian,
     opencr::joints::MAX_TICK,
@@ -332,19 +322,19 @@ bool OpenCR::set_gripper_profile_velocity(const int32_t & velocity)
 
 bool OpenCR::set_init_pose()
 {
-  std::vector<double> init_pose = {0.0, -1.57, 1.37, 0.26};
+  std::array<double, ARM_JOINTS> init_pose = {0.0, -1.57, 1.37, 0.26};
   return set_joint_positions(init_pose);
 }
 
 bool OpenCR::set_zero_pose()
 {
-  std::vector<double> zero_pose = {0.0, 0.0, 0.0, 0.0};
+  std::array<double, ARM_JOINTS> zero_pose = {0.0, 0.0, 0.0, 0.0};
   return set_joint_positions(zero_pose);
 }
 
 bool OpenCR::set_home_pose()
 {
-  std::vector<double> home_pose = {0.0, -1.05, 0.35, 0.70};
+  std::array<double, ARM_JOINTS> home_pose = {0.0, -1.05, 0.35, 0.70};
   return set_joint_positions(home_pose);
 }
 

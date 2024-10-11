@@ -30,53 +30,56 @@
 
 namespace robotis
 {
-namespace open_manipulator_hardware
-{
-class UsbDevice
-{
-public:
-  virtual ~UsbDevice() { };
+  namespace open_manipulator_hardware
+  {
 
-  virtual bool open_port(const std::string & usb_port, const uint32_t & baud_rate) = 0;
+    static constexpr size_t ARM_JOINTS = 4;
+    // there are 2 gripper joints controlled from 1 dynamixel
+    static constexpr size_t GRIPPER_JOINTS_DXL = 1;
+    static constexpr size_t GRIPPER_JOINTS_ROS = 2;
 
-  virtual uint16_t ping() = 0;
+    class UsbDevice
+    {
+    public:
+      virtual ~UsbDevice() {};
 
-  virtual bool is_connect_manipulator() = 0;
+      virtual bool open_port(const std::string &usb_port, const uint32_t &baud_rate) = 0;
 
-  virtual void play_sound(uint8_t sound) const = 0;
+      virtual uint16_t ping() = 0;
 
-  virtual void joints_torque(uint8_t onoff) const = 0;
+      virtual bool is_connect_manipulator() = 0;
 
-  virtual bool read_all() = 0;
+      virtual void play_sound(uint8_t sound) const = 0;
 
-  virtual std::array<double, 4> get_joint_positions() = 0;
-  virtual std::array<double, 4> get_joint_velocities() = 0;
+      virtual void joints_torque(uint8_t onoff) const = 0;
 
-  virtual double get_gripper_position() = 0;
-  virtual double get_gripper_velocity() = 0;
+      virtual bool read_all() = 0;
 
-  virtual bool set_joint_positions(std::vector<double> & radians) = 0;
-  virtual bool set_joint_profile_acceleration(
-    const std::array<int32_t, 4> & acceleration) = 0;
-  virtual bool set_joint_profile_velocity(const std::array<int32_t, 4> & velocity) = 0;
+      virtual void get_joint_positions(std::array<double, ARM_JOINTS> &joint_positions) = 0;
+      virtual void get_joint_velocities(std::array<double, ARM_JOINTS> &joint_velocities) = 0;
+      virtual bool set_joint_positions(std::array<double, ARM_JOINTS> &joint_goals) = 0;
+      virtual bool set_joint_profile_acceleration(
+          const std::array<int32_t, ARM_JOINTS> &acceleration) = 0;
+      virtual bool set_joint_profile_velocity(const std::array<int32_t, ARM_JOINTS> &velocity) = 0;
 
-  virtual bool set_gripper_position(const double & meters) = 0;
-  virtual bool set_gripper_profile_acceleration(const int32_t & acceleration) = 0;
-  virtual bool set_gripper_profile_velocity(const int32_t & velocity) = 0;
+      virtual void get_gripper_position(double &meter) = 0;
+      virtual void get_gripper_velocity(double &meter_per_second) = 0;
+      virtual bool set_gripper_position(double meter) = 0;
+      virtual bool set_gripper_profile_acceleration(const int32_t &acceleration) = 0;
+      virtual bool set_gripper_profile_velocity(const int32_t &velocity) = 0;
 
-  virtual bool set_home_pose() = 0;
-  virtual bool set_init_pose() = 0;
-  virtual bool set_zero_pose() = 0;
+      virtual bool set_home_pose() = 0;
+      virtual bool set_init_pose() = 0;
+      virtual bool set_zero_pose() = 0;
 
-  virtual bool set_gripper_current() = 0;
+      virtual bool set_gripper_current() = 0;
 
-  virtual bool open_gripper() = 0;
-  virtual bool close_gripper() = 0;
-  virtual bool init_gripper() = 0;
+      virtual bool open_gripper() = 0;
+      virtual bool close_gripper() = 0;
+      virtual bool init_gripper() = 0;
 
-  virtual void send_heartbeat(const uint8_t & count) = 0;
-
-};
-}  // namespace open_manipulator_hardware
-}  // namespace robotis
-#endif  // open_manipulator_HARDWARE__USBDEVICE_HPP_
+      virtual void send_heartbeat(const uint8_t &count) = 0;
+    };
+  } // namespace open_manipulator_hardware
+} // namespace robotis
+#endif // open_manipulator_HARDWARE__USBDEVICE_HPP_
